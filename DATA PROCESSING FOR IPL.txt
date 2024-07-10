@@ -1,0 +1,295 @@
+> library(dplyr)
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> library(dplyr)
+> library(ggplot2)
+Learn more about the underlying theory at
+https://ggplot2-book.org/
+> str(df)
+tibble [248 × 17] (S3: tbl_df/tbl/data.frame)
+ $ id             : num [1:248] 1 2 3 4 5 6 7 8 9 10 ...
+ $ season         : num [1:248] 2008 2008 2008 2008 2008 ...
+ $ city           : chr [1:248] "Bangalore" "Chandigarh" "Delhi" "Mumbai" ...
+ $ date           : POSIXct[1:248], format: "2008-04-18" ...
+ $ team1          : chr [1:248] "Kolkata Knight Riders" "Chennai Super Kings" "Rajasthan Royals" "Mumbai Indians" ...
+ $ team2          : chr [1:248] "Royal Challengers Bangalore" "Kings XI Punjab" "Delhi Daredevils" "Royal Challengers Bangalore" ...
+ $ toss_winner    : chr [1:248] "Royal Challengers Bangalore" "Chennai Super Kings" "Rajasthan Royals" "Mumbai Indians" ...
+ $ toss_decision  : chr [1:248] "field" "bat" "bat" "bat" ...
+ $ result         : chr [1:248] "normal" "normal" "normal" "normal" ...
+ $ dl_applied     : num [1:248] 0 0 0 0 0 0 0 0 0 0 ...
+ $ winner         : chr [1:248] "Kolkata Knight Riders" "Chennai Super Kings" "Delhi Daredevils" "Royal Challengers Bangalore" ...
+ $ win_by_runs    : num [1:248] 140 33 0 0 0 0 0 6 0 66 ...
+ $ win_by_wickets : num [1:248] 0 0 9 5 5 6 9 0 3 0 ...
+ $ player_of_match: chr [1:248] "BB McCullum" "MEK Hussey" "MF Maharoof" "MV Boucher" ...
+ $ venue          : chr [1:248] "M Chinnaswamy Stadium" "Punjab Cricket Association Stadium, Mohali" "Feroz Shah Kotla" "Wankhede Stadium" ...
+ $ umpire1        : chr [1:248] "Asad Rauf" "MR Benson" "Aleem Dar" "SJ Davis" ...
+ $ umpire2        : chr [1:248] "RE Koertzen" "SL Shastri" "GA Pratapkumar" "DJ Harper" ...
+> head(df)
+# A tibble: 6 × 17
+     id season city    date                team1 team2 toss_…¹ toss_…² result dl_ap…³
+  <dbl>  <dbl> <chr>   <dttm>              <chr> <chr> <chr>   <chr>   <chr>    <dbl>
+1     1   2008 Bangal… 2008-04-18 00:00:00 Kolk… Roya… Royal … field   normal       0
+2     2   2008 Chandi… 2008-04-19 00:00:00 Chen… King… Chenna… bat     normal       0
+3     3   2008 Delhi   2008-04-19 00:00:00 Raja… Delh… Rajast… bat     normal       0
+4     4   2008 Mumbai  2008-04-20 00:00:00 Mumb… Roya… Mumbai… bat     normal       0
+5     5   2008 Kolkata 2008-04-20 00:00:00 Decc… Kolk… Deccan… bat     normal       0
+6     6   2008 Jaipur  2008-04-21 00:00:00 King… Raja… Kings … bat     normal       0
+# … with 7 more variables: winner <chr>, win_by_runs <dbl>, win_by_wickets <dbl>,
+#   player_of_match <chr>, venue <chr>, umpire1 <chr>, umpire2 <chr>, and
+#   abbreviated variable names ¹​toss_winner, ²​toss_decision, ³​dl_applied
+# ℹ Use `colnames()` to see all variable names
+> tail(df)
+# A tibble: 6 × 17
+     id season city    date                team1 team2 toss_…¹ toss_…² result dl_ap…³
+  <dbl>  <dbl> <chr>   <dttm>              <chr> <chr> <chr>   <chr>   <chr>    <dbl>
+1   243   2011 Bangal… 2011-05-22 00:00:00 Chen… Roya… Royal … field   normal       0
+2   244   2011 Kolkata 2011-05-22 00:00:00 Kolk… Mumb… Mumbai… field   normal       0
+3   245   2011 Mumbai  2011-05-24 00:00:00 Roya… Chen… Chenna… field   normal       0
+4   246   2011 Mumbai  2011-05-25 00:00:00 Kolk… Mumb… Mumbai… field   normal       0
+5   247   2011 Chennai 2011-05-27 00:00:00 Roya… Mumb… Mumbai… field   normal       0
+6   248   2011 Chennai 2011-05-28 00:00:00 Chen… Roya… Chenna… bat     normal       0
+# … with 7 more variables: winner <chr>, win_by_runs <dbl>, win_by_wickets <dbl>,
+#   player_of_match <chr>, venue <chr>, umpire1 <chr>, umpire2 <chr>, and
+#   abbreviated variable names ¹​toss_winner, ²​toss_decision, ³​dl_applied
+# ℹ Use `colnames()` to see all variable names
+> nrow(df)
+[1] 248
+> df$date<-as.Date(date,"%d-%m-%y")
+Error in as.Date.default(date, "%d-%m-%y") : 
+  do not know how to convert 'date' to class “Date”
+> df$date<-as.Date(df$date,"%d-%m-%y")
+Warning message:
+In as.POSIXlt.POSIXct(x, tz = tz) : unknown timezone '%d-%m-%y'
+> df$date<-as.Date(df$date,"%d-%m-%Y")
+> df$season<-format(df$date,"%Y")
+> table(df$season)
+
+2008 2009 2010 2011 
+  58   57   60   73 
+> matches_season=df%>%group_by(season)%>%summarise(Total = n())
+> matches_season
+# A tibble: 4 × 2
+  season Total
+  <chr>  <int>
+1 2008      58
+2 2009      57
+3 2010      60
+4 2011      73
+> ggplot(matches_season) + aes(x=season, y=Total, group = 1) + geom_line(color="red")+ggtitle("IPL matches from 2008-2011")+ theme_minimal()
+> ggplot(matches_season) + aes(x=season, y=Total) + geom_bar(stat ="identity",fill=rainbow(4))+ggtitle("IPL matches from 2008-2011")+ theme_minimal()+coord_flip()
+> match=df%>%select(team1,team2)
+> match=data.frame(Team=unlist (match)%>%group_by(Team)%>%summarise(Total=n()))
+Error in UseMethod("group_by") : 
+  no applicable method for 'group_by' applied to an object of class "character"
+> match=data.frame(Team=unlist (match)%>%group_by(Team)%>%summarise(Total=n())
++ match=data.frame(Team=unlist (match)%>%group_by(Team)%>%summarise(Total=n())
+Error: unexpected symbol in:
+"match=data.frame(Team=unlist (match)%>%group_by(Team)%>%summarise(Total=n())
+match"
+> match=data.frame(Team = unlist (match))%>%group_by(Team)%>%summarise(Total=n())
+> match
+# A tibble: 10 × 2
+   Team                        Total
+   <chr>                       <int>
+ 1 Chennai Super Kings            62
+ 2 Deccan Chargers                60
+ 3 Delhi Daredevils               57
+ 4 Kings XI Punjab                57
+ 5 Kochi Tuskers Kerala           14
+ 6 Kolkata Knight Riders          55
+ 7 Mumbai Indians                 59
+ 8 Pune Warriors                  14
+ 9 Rajasthan Royals               56
+10 Royal Challengers Bangalore    62
+> ggplot(match) + aes(x=Team, y = Total) + geom_bar(stat="identity", fill = rainbow(10)) + ggtitle("IPL matches played by each team") + theme_minimal() + coord_flip()
+> matchwin = df %>% group_by(winner) %>% summarise(No_of_Matches_won = n())
+> matchwin %>% arrange(desc(No_of_Matches_won))
+# A tibble: 11 × 2
+   winner                      No_of_Matches_won
+   <chr>                                   <int>
+ 1 Chennai Super Kings                        37
+ 2 Mumbai Indians                             33
+ 3 Rajasthan Royals                           31
+ 4 Royal Challengers Bangalore                31
+ 5 Delhi Daredevils                           28
+ 6 Kings XI Punjab                            28
+ 7 Deccan Chargers                            25
+ 8 Kolkata Knight Riders                      24
+ 9 Kochi Tuskers Kerala                        6
+10 Pune Warriors                               4
+11 NA                                          1
+> ggplot(matchwin) + aes(x=winner, y = No_of_Matches_won) + geom_bar(stat="identity", fill = rainbow(10)) + ggtitle("No of matches won by each team") + theme_minimal()
+Error in `geom_bar()`:
+! Problem while setting up geom aesthetics.
+ℹ Error occurred in the 1st layer.
+Caused by error in `check_aesthetics()`:
+! Aesthetics must be either length 1 or the same as
+  the data (11)
+✖ Fix the following mappings: `fill`
+Run `rlang::last_error()` to see where the error occurred.
+> matchwin %>% arrange(desc(No_of_Matches_won))
+# A tibble: 11 × 2
+   winner                      No_of_Matches_won
+   <chr>                                   <int>
+ 1 Chennai Super Kings                        37
+ 2 Mumbai Indians                             33
+ 3 Rajasthan Royals                           31
+ 4 Royal Challengers Bangalore                31
+ 5 Delhi Daredevils                           28
+ 6 Kings XI Punjab                            28
+ 7 Deccan Chargers                            25
+ 8 Kolkata Knight Riders                      24
+ 9 Kochi Tuskers Kerala                        6
+10 Pune Warriors                               4
+11 NA                                          1
+> ggplot(matchwin) + aes(x=winner, y = No_of_Matches_won) + geom_bar(stat="identity", fill = rainbow(11)) + 
++ ggplot(matchwin) + aes(x=winner, y = No_of_Matches_won) + geom_bar(stat="identity", fill = rainbow(11)) + 
++ matchwin %>% arrange(desc(No_of_Matches_won))
+Error in `ggplot_add()`:
+! Can't add `ggplot(matchwin)` to a <ggplot> object.
+Run `rlang::last_error()` to see where the error occurred.
+> matchwin = df %>% group_by(winner) %>% summarise(No_of_Matches_won = n())
+> matchwin %>% arrange(desc(No_of_Matches_won))
+# A tibble: 11 × 2
+   winner                      No_of_Matches_won
+   <chr>                                   <int>
+ 1 Chennai Super Kings                        37
+ 2 Mumbai Indians                             33
+ 3 Rajasthan Royals                           31
+ 4 Royal Challengers Bangalore                31
+ 5 Delhi Daredevils                           28
+ 6 Kings XI Punjab                            28
+ 7 Deccan Chargers                            25
+ 8 Kolkata Knight Riders                      24
+ 9 Kochi Tuskers Kerala                        6
+10 Pune Warriors                               4
+11 NA                                          1
+> ggplot(matchwin) + aes(x=winner, y = No_of_Matches_won) + geom_bar(stat="identity", fill = rainbow(11)) + ggtitle("No of Matches won by each team") + theme_minimal()
+> filter(df, is.na(winner))
+# A tibble: 1 × 17
+     id season city  date       team1  team2 toss_…¹ toss_…²
+  <dbl> <chr>  <chr> <date>     <chr>  <chr> <chr>   <chr>  
+1   242 2011   Delhi 2011-05-21 Delhi… Pune… Delhi … bat    
+# … with 9 more variables: result <chr>, dl_applied <dbl>,
+#   winner <chr>, win_by_runs <dbl>, win_by_wickets <dbl>,
+#   player_of_match <chr>, venue <chr>, umpire1 <chr>,
+#   umpire2 <chr>, and abbreviated variable names
+#   ¹​toss_winner, ²​toss_decision
+# ℹ Use `colnames()` to see all variable names
+> df%>%group_by(winner,city)%>%summarise(win = n())%>%arrange(desc(win))
+`summarise()` has grouped output by 'winner'. You can
+override using the `.groups` argument.
+# A tibble: 113 × 3
+# Groups:   winner [11]
+   winner                      city         win
+   <chr>                       <chr>      <int>
+ 1 Mumbai Indians              Mumbai        18
+ 2 Chennai Super Kings         Chennai       15
+ 3 Kolkata Knight Riders       Kolkata       13
+ 4 Rajasthan Royals            Jaipur        12
+ 5 Kings XI Punjab             Chandigarh    10
+ 6 Royal Challengers Bangalore Bangalore     10
+ 7 Delhi Daredevils            Delhi          8
+ 8 Chennai Super Kings         Mumbai         5
+ 9 Deccan Chargers             Mumbai         3
+10 Delhi Daredevils            Durban         3
+# … with 103 more rows
+# ℹ Use `print(n = ...)` to see more rows
+> df%>%filter(neutral_venue == "1")%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+Error in `filter()`:
+! Problem while computing `..1 = neutral_venue == "1"`.
+Caused by error in `mask$eval_all_filter()`:
+! object 'neutral_venue' not found
+Run `rlang::last_error()` to see where the error occurred.
+> df%>%filter(dl_applied == "1")%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+# A tibble: 6 × 2
+  winner                        win
+  <chr>                       <int>
+1 Chennai Super Kings             2
+2 Kolkata Knight Riders           2
+3 Delhi Daredevils                1
+4 Kings XI Punjab                 1
+5 Kochi Tuskers Kerala            1
+6 Royal Challengers Bangalore     1
+> table(ifelse(df$toss_winner==df$winner,"Toss winner won the match","Toss winner lost the match"))
+
+Toss winner lost the match  Toss winner won the match 
+                       117                        130 
+> df$TossMatch = ifelse(df$toss_winner==df$winner,"Yes","No")
+> df%>%filter(TossMatch=="No")%>% group_by(winner)%>%summarise(win_after_losing_toss=n())%>%arrange(desc(win_after_losing_toss))
+# A tibble: 10 × 2
+   winner                      win_after_losing_toss
+   <chr>                                       <int>
+ 1 Royal Challengers Bangalore                    18
+ 2 Chennai Super Kings                            17
+ 3 Mumbai Indians                                 17
+ 4 Kings XI Punjab                                16
+ 5 Rajasthan Royals                               13
+ 6 Delhi Daredevils                               12
+ 7 Kolkata Knight Riders                          10
+ 8 Deccan Chargers                                 8
+ 9 Pune Warriors                                   4
+10 Kochi Tuskers Kerala                            2
+> df%>%filter(result == "wickets"&result_margin == 10)%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+Error in `filter()`:
+! Problem while computing `..1 = result == "wickets" &
+  result_margin == 10`.
+Caused by error in `mask$eval_all_filter()`:
+! object 'result_margin' not found
+Run `rlang::last_error()` to see where the error occurred.
+> df%>%filter(result == "wickets"&win_by_wickets == 10)%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+# A tibble: 0 × 2
+# … with 2 variables: winner <chr>, win <int>
+# ℹ Use `colnames()` to see all variable names
+> df%>%filter(result == "wickets"&result == 10)%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+# A tibble: 0 × 2
+# … with 2 variables: winner <chr>, win <int>
+# ℹ Use `colnames()` to see all variable names
+> df%>%filter(result == "runs"&result == 1)%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+# A tibble: 0 × 2
+# … with 2 variables: winner <chr>, win <int>
+# ℹ Use `colnames()` to see all variable names
+> df%>%filter(result == "runs"&result_margin == 1)%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+Error in `filter()`:
+! Problem while computing `..1 = result == "runs" & result_margin
+  == 1`.
+Caused by error in `mask$eval_all_filter()`:
+! object 'result_margin' not found
+Run `rlang::last_error()` to see where the error occurred.
+> df%>%filter(result == "wickets"&result == 10)%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+# A tibble: 0 × 2
+# … with 2 variables: winner <chr>, win <int>
+# ℹ Use `colnames()` to see all variable names
+> df%>%filter(result == "runs"&result == 1)%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+# A tibble: 0 × 2
+# … with 2 variables: winner <chr>, win <int>
+# ℹ Use `colnames()` to see all variable names
+> df%>%filter(result == "wickets"&result == 1)%>%group_by(winner)%>%summarise(win=n())%>%arrange(desc(win))
+# A tibble: 0 × 2
+# … with 2 variables: winner <chr>, win <int>
+# ℹ Use `colnames()` to see all variable names
+> df%>%group_by(player_of_match)%>%summarise(Total=n())%>%arrange(desc(Total))
+# A tibble: 117 × 2
+   player_of_match  Total
+   <chr>            <int>
+ 1 YK Pathan           11
+ 2 CH Gayle             7
+ 3 SR Tendulkar         7
+ 4 JH Kallis            6
+ 5 MS Dhoni             6
+ 6 SE Marsh             6
+ 7 V Sehwag             6
+ 8 AC Gilchrist         5
+ 9 DPMD Jayawardene     5
+10 SK Raina             5
+# … with 107 more rows
+# ℹ Use `print(n = ...)` to see more rows
