@@ -1,0 +1,73 @@
+<style>
+body {
+  background-image: url('../static/images/background.jpg');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+}
+</style>
+
+<html>
+<form action="/pred" method="POST">
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <label >Choose your type of payment:</label>
+    <br>
+
+
+<!--    'CASH_IN': 0, 'CASH_OUT': 1, 'DEBIT': 2, 'PAYMENT': 3, 'TRANSFER': 4-->
+    <select name="type">
+        <option value="0">CASH_IN</option>
+        <option value="1">CASH_OUT</option>
+        <option value="2">DEBIT</option>
+        <option value="3">PAYMENT</option>
+        <option value="4">TRANSFER</option>
+
+    </select>
+    <br>
+
+    <br>
+    Enter your Amount of the Transaction:
+    <br>
+
+    <br>
+    <input type="text" name="amount"></input>
+    <br>
+    <br>
+    Enter your Balance before Transaction:
+    <br>
+
+<br>
+<input type="text" name="oldbalanceOrg"></input>
+<br>
+<br>
+Enter your Balance after the transaction  :
+<br>
+<br>
+<input type="text" name="newbalanceOrg"></input>
+<br>
+
+<br>
+Enter intial balance of recipient before transaction :
+<br>
+
+<br>
+<input type="text" name="oldbalanceDest"></input>
+<br>
+<br>
+    Enter  new balance of recipient before transaction :
+<br>
+<br>
+<input type="text" name="newbalanceDest"></input>
+<br>
+
+<br>
+<input type="submit"></input>
+
+</form>
+
+{{result}}
+</html>

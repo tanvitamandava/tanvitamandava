@@ -1,0 +1,14 @@
+body {
+    text-align: center;
+    padding: 50px;
+}
+
+.no-fraud {
+    background-color: green;
+    color: white;
+}
+
+.fraud {
+    background-color: red;
+    color: white;
+}
