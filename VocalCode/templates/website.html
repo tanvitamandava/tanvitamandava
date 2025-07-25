@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unified Live Code Editor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.min.js"></script>
+  <style>
+    #micIcon {
+      font-size: 24px;
+      color: red;
+      display: none;
+      margin-left: 10px;
+    }
+
+    .blinking {
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    .iframe-container {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+    }
+
+    .iframe-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    #stopButton {
+      padding: 8px;
+      margin-left: 10px;
+      background-color: #ff4747;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      /* display: none; */
+    }
+
+    #stopButton:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    #chatContainer {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      /* width: 300px; */
+      font-family: Arial, sans-serif;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    #chatHeader {
+      background-color: #007bff;
+      color: white;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 5px 5px 0 0;
+      text-align: center;
+    }
+
+    #chatBody {
+      display: none;
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 0 0 5px 5px;
+      height: 500px;
+      width: 700px;
+      overflow: hidden;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    #chatMessages {
+      padding: 10px;
+      /* height: 300px; */
+      overflow-y: auto;
+      border-bottom: 1px solid #ddd;
+    }
+
+    #chatInputContainer {
+      display: flex;
+      padding: 10px;
+    }
+
+    #chatInput {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    #sendChatBtn {
+      margin-left: 10px;
+      padding: 8px 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #sendChatBtn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="editor" style="position: relative;">
+      <div class="controls" style="display: flex; align-items: center; ">
+        <!-- Back Arrow Button -->
+        <button 
+          style="margin-right: 57%; background: transparent; border: none; font-size: xx-large; cursor: pointer;" 
+          id="backButton" 
+          onclick="window.location.href='/'">🔙
+        </button>
+        <button id="startSpeechBtn" onclick="startRecognition()" style="margin-left: 30px; padding: 10px">
+          Start Speech Recognition
+        </button>
+        <div id="micIcon">🎤</div>
+      </div>
+      <textarea 
+        style="height: 85%; width: 100%; padding: 10px; margin-top: 10px; box-sizing: border-box; position: relative;" 
+        id="codeEditor" 
+        placeholder="Type your HTML, CSS, and JavaScript here..." 
+        oninput="runUnifiedCode()"></textarea>
+      <button 
+        id="stopButton" 
+        onclick="stopResponse()" 
+        style="position: absolute; top: 95px; right: 44px; padding: 8px; background-color: #f00; color: #fff; border: none; cursor: pointer;">
+        Stop Response
+      </button>
+      <div class="manual-input" style="margin-top: 10px;">
+        <h4>Or Enter Your Query Manually:</h4>
+        <input 
+          type="text" 
+          id="manualQuery" 
+          placeholder="Type your query here..." 
+          style="width: 80%; padding: 8px; margin-right: 10px;" />
+        <button onclick="submitManualQuery()" style="padding: 8px;">Submit Query</button>
+      </div>
+    </div>
+    
+
+    <div class="resizer"></div>
+
+    <div class="output">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <h3>Live Output:</h3>
+      </div>
+      <div class="iframe-container" style="position: relative; width: 100%; padding-top: 56.25%; margin-top: 10px; border: 1px solid #ccc;">
+        <iframe id="outputFrame" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"></iframe>
+        <button 
+          style="position: absolute; top: 2px; right: 10px; background: transparent; border: none; font-size: xx-large; font-weight: 1000; cursor: pointer;" 
+          class="fullscreen-button" 
+          onclick="toggleFullscreen(document.getElementById('outputFrame'))">⛶
+        </button>
+      </div>
+      <div class="speech-recognition">
+        <div id="speechOutput" class="speech-output"></div>
+      </div>
+    </div>
+    
+    <div id="chatContainer">
+      <div id="chatHeader" onclick="toggleChat()">Ask Website Related Questions</div>
+      <div id="chatBody">
+        <div id="chatMessages"></div>
+        <div id="chatInputContainer">
+          <input id="chatInput" type="text" placeholder="Type your message..." />
+          <button id="sendChatBtn" onclick="sendChatMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var socket = io();
+    let currentCode = "";
+    let isProcessing = false;
+    let wasStopped = false;
+    let isFirstLine = true;
+    let isChatOpen = false;
+
+    let currentMessage = ""; // Track the current message being built
+    let accumulatedMessage = ""; // To store the full message
+
+
+    function toggleChat() {
+      const chatBody = document.getElementById("chatBody");
+      isChatOpen = !isChatOpen;
+      chatBody.style.display = isChatOpen ? "flex" : "none";
+    }
+
+    function sendChatMessage() {
+      const chatInput = document.getElementById("chatInput");
+      let message = chatInput.value.trim();
+
+      if (message) {
+        // Append user's message
+        const chatMessages = document.getElementById("chatMessages");
+        const userMessageElement = document.createElement("div");
+        userMessageElement.classList.add('chat-message', 'user-message');
+        userMessageElement.innerHTML = `<strong>You:</strong> ${message}`;
+        chatMessages.appendChild(userMessageElement);
+
+        // Emit message to server
+        message = document.getElementById("codeEditor").value + '. Write related to this website only.' + message; 
+        console.log(message);
+        socket.emit("chat_message", { text: message });
+
+        // Clear input
+        chatInput.value = "";
+
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    }
+
+    let currentResponse = ""; // Track the current response being built
+
+    socket.on("chat_response", function (data) {
+      if (data.message) {
+        // Accumulate the response while preserving exact newlines
+        currentResponse += data.message;
+
+        // Find or create the last Ollama message
+        const chatMessages = document.getElementById("chatMessages");
+        let lastOllamaMessage = chatMessages.lastElementChild;
+
+        if (!lastOllamaMessage || !lastOllamaMessage.classList.contains('ollama-message')) {
+          lastOllamaMessage = document.createElement("div");
+          lastOllamaMessage.classList.add('chat-message', 'ollama-message');
+          lastOllamaMessage.innerHTML = `<strong>Vocal Bot:</strong><pre style="white-space: pre-wrap; margin: 0;"></pre>`;
+          chatMessages.appendChild(lastOllamaMessage);
+        }
+
+        // Update the <pre> tag inside the message
+        const preTag = lastOllamaMessage.querySelector('pre');
+        preTag.textContent = currentResponse;
+
+        // Scroll to the bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Reset for the next interaction
+      if (data.done) {
+        currentResponse = "";
+      }
+    });
+
+
+
+    function appendChatMessage(sender, message) {
+     const chatMessages = document.getElementById("chatMessages");
+      
+      // Create a new message container
+      const newMessage = document.createElement("div");
+      newMessage.classList.add("chat-message");
+
+      // Preserve formatting by using `<pre>` for preformatted text
+      newMessage.innerHTML = `<strong>${sender}:</strong> <pre style="white-space: pre-wrap; margin: 0;">${message}</pre>`;
+      
+      chatMessages.appendChild(newMessage);
+
+      // Auto-scroll to the bottom
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+
+
+
+    function resetStates() {
+      isProcessing = false;
+      wasStopped = false;
+      isFirstLine = true;
+    }
+
+    function updateButtonStates(processing) {
+      const startButton = document.getElementById("startSpeechBtn");
+      const stopButton = document.getElementById("stopButton");
+      const manualQueryInput = document.getElementById("manualQuery");
+      const submitButton = document.querySelector(".manual-input button");
+
+      isProcessing = processing;
+
+      // Always show stop button during processing, for both voice and manual input
+      // stopButton.style.display = processing ? "inline-block" : "none";
+      // stopButton.disabled = !processing;
+
+      startButton.disabled = processing;
+      // manualQueryInput.disabled = processing;
+      // submitButton.disabled = processing;
+    }
+
+    function startRecognition() {
+      // Explicitly call updateButtonStates(true) to ensure stop button appears
+      resetStates();
+      updateButtonStates(true);
+      document.getElementById("codeEditor").value = "";
+      currentCode = "";
+      socket.emit("start");
+    }
+
+    function runUnifiedCode() {
+      const outputFrame = document.getElementById("outputFrame");
+      const code = document.getElementById("codeEditor").value;
+
+      const blob = new Blob([code], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      outputFrame.src = url;
+    }
+
+    function toggleFullscreen(element) {
+      if (element.requestFullscreen) {
+        element.requestFullscreen();
+      } else if (element.mozRequestFullScreen) {
+        element.mozRequestFullScreen();
+      } else if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen();
+      } else if (element.msRequestFullscreen) {
+        element.msRequestFullscreen();
+      }
+    }
+
+    // function startRecognition() {
+    //   resetStates();
+    //   updateButtonStates(true);
+    //   document.getElementById("codeEditor").value = "";
+    //   currentCode = "";
+    //   socket.emit("start");
+    // }
+
+    function stopResponse() {
+
+      wasStopped = true;
+      socket.emit("stop_typing");
+
+    }
+
+    function submitManualQuery() {
+      const queryInput = document.getElementById("manualQuery");
+      const query = queryInput.value.trim();
+
+      if (query) {
+        resetStates();
+        currentCode = "";
+        queryInput.value = "";
+        updateButtonStates(true);
+        socket.emit("manual_input", { text: query });
+      }
+    }
+
+    function appendToSpeechOutput(message) {
+      const speechOutput = document.getElementById("speechOutput");
+      const newParagraph = document.createElement("p");
+      newParagraph.textContent = message;
+      speechOutput.appendChild(newParagraph);
+      speechOutput.scrollTop = speechOutput.scrollHeight;
+    }
+
+    socket.on("output", function (data) {
+      const message = data.message;
+      const codeEditor = document.getElementById("codeEditor");
+
+      if (message.startsWith("Your query:")) {
+        if (message === "Your query: stopped") {
+          appendToSpeechOutput("Response stopped by user");
+          updateButtonStates(false);
+          resetStates();
+        } else {
+          appendToSpeechOutput(message);
+        }
+      } else if (message.includes("could not understand") || message.includes("Could not request")) {
+        appendToSpeechOutput(message);
+        updateButtonStates(false);
+      } else if (!wasStopped) {
+        // Skip the first line of the response
+        if (isFirstLine) {
+          if (message.includes('\n')) {
+            // If the message contains a newline, take everything after it
+            currentCode += message.substring(message.indexOf('\n') + 1);
+            isFirstLine = false;
+          }
+          // If no newline is found, skip this message entirely as it's part of the first line
+        } else {
+          // After first line is handled, append all subsequent messages
+          currentCode += message;
+        }
+
+        codeEditor.value = currentCode;
+        runUnifiedCode();
+      }
+    });
+
+    socket.on("start_streaming", function () {
+      const micIcon = document.getElementById("micIcon");
+      micIcon.style.display = "inline";
+      micIcon.classList.add("blinking");
+    });
+
+    socket.on("stop_streaming", function () {
+      const micIcon = document.getElementById("micIcon");
+      micIcon.classList.remove("blinking");
+      micIcon.style.display = "none";
+
+      const button = document.getElementById("startSpeechBtn");
+      button.disabled = false;
+      button.textContent = "Start Speech Recognition";
+
+      // Check if the receivedContent contains a newline and process it
+      if (currentCode.includes("\n")) {
+        let lines = currentCode.split("\n");
+        if (lines.length > 1) {
+          lines.pop();  // Remove the last line if there are more than one
+          console.log("popped")
+          document.getElementById("codeEditor").value = lines.join("\n");  // Join the remaining lines back and update the code editor
+          runUnifiedCode()
+        }
+
+      }
+    });
+
+
+    document.getElementById("manualQuery").addEventListener("keypress", function (event) {
+      if (event.key === "Enter") {
+        submitManualQuery();
+      }
+    });
+  </script>
+</body>
+
+</html>

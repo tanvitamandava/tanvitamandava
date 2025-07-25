@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ Code Compiler</title>
+    <link rel="stylesheet" href="static/stylescpp.css">
+    <style>
+        #micIcon {
+            font-size: 24px;
+            color: red;
+            display: none;
+        }
+        .blinking {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>C++ Code Compiler</h1>
+        </div>
+        <div class="button-container">
+            <button id="runButton">Run Code</button>
+            <button id="nightModeButton">💡</button>
+            <button onclick="startRecognition()">Start Speech Recognition</button>
+            <div id="micIcon">🎤</div>
+            <!-- Stop Button -->
+            <button style="color: red;" id="stopButton" onclick="stopResponse()">Stop Response</button>
+
+        </div>
+        <form id="codeForm">
+            <div class="form-container">
+                <div class="code-section">
+                    <div class="code-input-container">
+                        <label for="code">Enter your C++ code:</label>
+                        <textarea id="code" name="code" placeholder="Write your C++ code here..." spellcheck="false" class="code-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="output-section">
+                    <div class="upper-right">
+                        <label for="inputs">Enter your input (optional):</label>
+                        <textarea id="inputs" name="inputs" placeholder="Enter input values (if any), separated by new lines..." spellcheck="false" class="input-textarea"></textarea>
+                    </div>
+                    <div class="lower-right">
+                        <label for="inputs">Your Output:</label>
+                        <pre id="output"></pre>
+                    </div>
+                    <div id="speechOutput" style="height: 200px; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;"></div>
+                </div>
+            </div>
+        </form>
+
+        <!-- New text box and submit button for manual input -->
+        <div style="display: flex; align-items: center;" class="manual-input">
+            <textarea style="margin-left:1% ; resize: none; width: 40%;" id="manualInput" placeholder="Type your input here..." spellcheck="false"></textarea>
+            <button style="padding: 0.4%; margin-left: 2%; " onclick="submitText()">Submit</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.min.js"></script>
+    <script>
+        var socket = io();
+        let firstLineReceived = false;
+        let receivedContent = '';
+
+        // Function to start speech recognition
+        function startRecognition() {
+            socket.emit('start');
+            firstLineReceived = false;
+            receivedContent = '';
+            document.getElementById('code').value = '';
+        }
+
+        // Function to stop the response (same as website.html)
+        function stopResponse() {
+            // Emit stop_typing event to server
+            socket.emit('stop_typing');
+            console.log("Stopping response...");
+        }
+
+        // Function to handle manual input submission
+        function submitText() {
+            const manualText = document.getElementById('manualInput').value;
+            if (manualText.trim()) {
+                socket.emit('start', {text: 'text'}); // Emit the start event
+                socket.emit('manual_input', { text: manualText }); // Send manual input to server
+                firstLineReceived = false;
+                receivedContent = '';
+                document.getElementById('code').value = '';
+                document.getElementById('manualInput').value = '';
+            }
+        }
+
+        socket.on('output', function(data) {
+            var speechOutputDiv = document.getElementById('speechOutput');
+            var codeEditor = document.getElementById('code');
+
+            if (data.message.startsWith("Your query:") || data.message.startsWith("Streaming...")) {
+                let newParagraph = document.createElement("p");
+                newParagraph.textContent = data.message;
+                speechOutputDiv.appendChild(newParagraph);
+                return;
+            }
+
+            receivedContent += data.message;
+
+            if (!firstLineReceived && receivedContent.includes('\n')) {
+                firstLineReceived = true;
+                receivedContent = receivedContent.substring(receivedContent.indexOf('\n') + 1);
+                codeEditor.value = '';
+            }
+
+            if (firstLineReceived) {
+                codeEditor.value = receivedContent;
+            }
+        });
+
+        socket.on('start_streaming', function() {
+            var micIcon = document.getElementById('micIcon');
+            micIcon.style.display = 'inline';
+            micIcon.classList.add('blinking');
+        });
+
+        socket.on('stop_streaming', function() {
+            var micIcon = document.getElementById('micIcon');
+            micIcon.classList.remove('blinking');
+            micIcon.style.display = 'none';
+
+            if (receivedContent.includes('\n')) {
+                let lines = receivedContent.split('\n');
+                if (lines.length > 1) {
+                    lines.pop();
+                    document.getElementById('code').value = lines.join('\n');
+                }
+            }
+        });
+    </script>
+
+    <script src="static/scriptcpp.js"></script>
+</body>
+</html>
